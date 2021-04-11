@@ -82,7 +82,6 @@ void variableDelay(int ms) {
  
  
 ISR(INT0_vect) {
-  Serial.println("Interrupted");
   configMode == 0 ? configMode = 1 : configMode = 0;
 }
  
