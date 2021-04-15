@@ -124,7 +124,8 @@ int main(void) {
   TCCR0B = 0;
   TCCR0A |= (1<<WGM01);
   TCCR0B |= (1<<CS00) | (1<<CS02);    // configure prescaler to 1024
-  OCR0A = 15625;                      // set the compare value to 1 second 
+  OCR0A = 15625;                      // set the compare value to 1 second
+  TIMSK0 |= (1<<OCIE0A);              // enable the compare ISR() 
 
    
 /*************    Configure timer1 (16-bit) to fast PWM mode (mode 14)   *****************/ 
