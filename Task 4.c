@@ -9,15 +9,18 @@
 
 void trafficLight();
 void timer0Delay();
-uint8_t carCount = 0;
-uint8_t ovfCount = 0;
-uint8_t delayMode = 0;
-uint8_t lightState = 1;
+void redLightCamera();
+uint8_t volatile lb3Sensor = 0;
+uint8_t volatile carCount = 0;
+uint8_t volatile ovfCount = 0;
+uint8_t volatile delayMode = 0;
+uint8_t volatile lightState = 1;
 
 
 
 ISR(TIMER1_OVF_vect) {
-  
+
+  //Serial.println("Timer1_OVF");
   trafficLight();   // change the trafficLight
 
   /* change lightState every 1 second */
@@ -29,30 +32,19 @@ ISR(TIMER1_OVF_vect) {
 }
 
 
-ISR(TIMER0_COMPA_vect) {
+ISR(TIMER0_OVF_vect) {
 
-  if (delayMode) {
-    ovfCount++;
+  if (delayMode == 1) {
+    ovfCount = ovfCount + 1;
   }
 }
 
 
 ISR(INT0_vect) {
 
-  // only trigger when traffic light is red  
-  if ((PORTB & (~PORTB | (1<<PB4))) != 0) {
-
-    // pulse the white LED twice 
-    for (unsigned int i = 0; i < 2; i++) {
-      PORTB |= (1<<PB0);
-      timer0Delay();
-      PORTB &= ~(1<<PB0);
-      timer0Delay(); 
-    }
-
-    if (carCount < 100) {
-      carCount++;             // carCount > 100 has no effect on PWM (remains @ 100% duty-cycle) 
-    }
+  // only consider an lb3 breach during a red light 
+  if (!((PORTB & (~(PORTB) | (1<<PB4))) == 0)) {
+    lb3Sensor = 1;
   }
 }
 
@@ -85,7 +77,6 @@ void timer0Delay() {
   ovfCount = 0;
   delayMode = 1;
   TCNT0 = 0;
-  unsigned int i = 1;
 
   while (ovfCount < 7) {
     asm volatile ("nop");
@@ -97,6 +88,24 @@ void timer0Delay() {
 
   ovfCount = 0;
   delayMode = 0;
+}
+
+
+
+void redLightCamera() {
+
+  for (unsigned int i = 0; i < 2; i++) {     // pulse the white LED twice 
+    PORTB |= (1<<PB0);
+    timer0Delay();
+    PORTB &= ~(1<<PB0);
+    timer0Delay(); 
+  }
+
+  if (carCount < 100) {
+    carCount++;             // carCount > 100 has no effect on PWM (remains @ 100% duty-cycle) 
+  }
+
+  lb3Sensor = 0;
 }
 
 
@@ -116,16 +125,19 @@ int main(void) {
    
   // Configure traffic light pins to output
   DDRB |= (1<<DDB0) | (1<<DDB1) | (1<<DDB2) | (1<<DDB3) | (1<<DDB4);
+  DDRD &= ~(1<<DDD2);    // INT0 input pin
 
   cli();   // disable all interrupts during configuration
 
-/**************     Configure timer0 (8-bit) to CTC mode (mode 14)       *****************/
+  // configure external interrupt (INT0)
+  EIMSK |= (1<<INT0);
+  EICRA |= (1<<ISC00) | (1<<ISC01);   // any logical change on INT0 generates an interrupt request
+
+/**************     Configure timer0 (8-bit) to normal mode (mode 14)       *****************/
   TCCR0A = 0;
   TCCR0B = 0;
-  TCCR0A |= (1<<WGM01);
   TCCR0B |= (1<<CS00) | (1<<CS02);    // configure prescaler to 1024
-  OCR0A = 15625;                      // set the compare value to 1 second
-  TIMSK0 |= (1<<OCIE0A);              // enable the compare ISR() 
+  TIMSK0 |= (1<<TOIE0);              // enable the overflow ISR() 
 
    
 /*************    Configure timer1 (16-bit) to fast PWM mode (mode 14)   *****************/ 
@@ -149,7 +161,11 @@ int main(void) {
 
   while (1) {
       
-    // control PWM duty-cycle 
+    // control PWM duty-cycle
     OCR1A = (15625 * (1 - (carCount/100)));
+
+    if (lb3Sensor) {
+      redLightCamera();   // activate red light camera 
+    }
   }
- }
+}
