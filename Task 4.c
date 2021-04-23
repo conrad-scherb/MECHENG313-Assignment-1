@@ -5,6 +5,8 @@
  * 
  */
 
+
+
 #include <avr/interrupt.h> 
 
 void trafficLight();
@@ -20,7 +22,6 @@ uint8_t volatile lightState = 1;
 
 ISR(TIMER1_OVF_vect) {
 
-  //Serial.println("Timer1_OVF");
   trafficLight();   // change the trafficLight
 
   /* change lightState every 1 second */
@@ -102,7 +103,7 @@ void redLightCamera() {
   }
 
   if (carCount < 100) {
-    carCount++;             // carCount > 100 has no effect on PWM (remains @ 100% duty-cycle) 
+    carCount++;   // carCount > 100 has no effect on PWM (remains @ 100% duty-cycle)
   }
 
   lb3Sensor = 0;
@@ -122,7 +123,7 @@ int main(void) {
    *  Set up
    * 
    */
-   
+
   // Configure traffic light pins to output
   DDRB |= (1<<DDB0) | (1<<DDB1) | (1<<DDB2) | (1<<DDB3) | (1<<DDB4);
   DDRD &= ~(1<<DDD2);    // INT0 input pin
@@ -145,10 +146,10 @@ int main(void) {
   TCCR1B = 0;
   TCCR1A |= (1<<WGM11);
   TCCR1B |= (1<<WGM12) | (1<<WGM13);
-  TCCR1A |= (1<<COM1A0) | (1<<COM1A1);        // set OC1A on compare match, clear at bottom
+  TCCR1A |= (1<<COM1A1);        // set OC1A on compare match, clear at bottom
   TCCR1B |= (1<<CS10) | (1<<CS12);            // configure the timer prescaler to 1024
   ICR1 = 15625;                               // set the top value for a one second period 
-  OCR1A = 15625;                              // default PWM is zero duty-cycle 
+  OCR1A = 0;                              // default PWM is zero duty-cycle 
   TIMSK1 |= (1<<TOIE1);                       // enabling the overflow ISR()
 
   sei();   // enable all interrupts after configuration is complete
@@ -162,7 +163,7 @@ int main(void) {
   while (1) {
       
     // control PWM duty-cycle
-    OCR1A = (15625 * (1 - (carCount/100)));
+    OCR1A = (15625 * (carCount/100.0));
 
     if (lb3Sensor) {
       redLightCamera();   // activate red light camera 
