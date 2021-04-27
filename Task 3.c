@@ -1,5 +1,3 @@
-#include <util/delay.h>
- 
 #define GREEN DDB1
 #define RED DDB3
 #define PWM DDB5
@@ -10,7 +8,6 @@ volatile int startTimes[5] = {0, 0, 0, 0, 0};
 volatile int lb1idx = 0;
  
 int main(void) {
-
   // Configure the pins to output for green+red LEDs and PWM
   DDRB != (1<<GREEN)|(1<<RED)|(1<<PWM);
 
@@ -19,7 +16,7 @@ int main(void) {
  
   // Set external interrupts
   EIMSK |= (1<<INT1)|(1<<INT0);
-  EICRA |= (1<<ISC11)|(1<<ISC01);
+  EICRA |= (1<<ISC11)|(1<<ISC01)|(1<<ISC10)|(1<<ISC00);
  
   // Using the timer with OCR1A = 1999 and a prescaler
   // of 8 causes an interrupt every 1ms
@@ -82,17 +79,13 @@ ISR(INT0_vect) {
    
     // Find the speed to update PWM state 
     speed = ((double)20/elapsedTime)*1000;
-
-    printArray(startTimes);
    
     // Shift the start times array to the left
     for (int i = 0; i < 4; i++) {
         startTimes[i] = startTimes[i+1];
     }
     startTimes[4] = 0;
-  
-    printArray(startTimes);
-   
+    
     // Next time LB1 is pressed, change the position
     // on start times array to write to
     lb1idx--;
@@ -106,4 +99,3 @@ ISR(TIMER1_COMPA_vect) {
   // Tick up the millisecond count on timer overflow
   elapsed++;
 }
- 
