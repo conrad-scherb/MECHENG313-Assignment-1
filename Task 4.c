@@ -36,7 +36,7 @@ ISR(TIMER1_OVF_vect) {
 ISR(TIMER0_OVF_vect) {
 
   if (delayMode == 1) {
-    ovfCount = ovfCount + 1;
+    ovfCount = ovfCount + 1;      // track the overflow count for delay
   }
 }
 
@@ -132,13 +132,13 @@ int main(void) {
 
   // configure external interrupt (INT0)
   EIMSK |= (1<<INT0);
-  EICRA |= (1<<ISC00) | (1<<ISC01);   // any logical change on INT0 generates an interrupt request
+  EICRA |= (1<<ISC00) | (1<<ISC01);   // rising edge INT0 generates an interrupt request
 
 /**************     Configure timer0 (8-bit) to normal mode (mode 14)       *****************/
   TCCR0A = 0;
   TCCR0B = 0;
-  TCCR0B |= (1<<CS00) | (1<<CS02);    // configure prescaler to 1024
-  TIMSK0 |= (1<<TOIE0);              // enable the overflow ISR() 
+  TCCR0B |= (1<<CS00) | (1<<CS02);      // configure prescaler to 1024
+  TIMSK0 |= (1<<TOIE0);                 // enable the overflow ISR() 
 
    
 /*************    Configure timer1 (16-bit) to fast PWM mode (mode 14)   *****************/ 
@@ -149,7 +149,7 @@ int main(void) {
   TCCR1A |= (1<<COM1A1);        // set OC1A on compare match, clear at bottom
   TCCR1B |= (1<<CS10) | (1<<CS12);            // configure the timer prescaler to 1024
   ICR1 = 15625;                               // set the top value for a one second period 
-  OCR1A = 0;                              // default PWM is zero duty-cycle 
+  OCR1A = 0;                                  // default PWM is zero duty-cycle 
   TIMSK1 |= (1<<TOIE1);                       // enabling the overflow ISR()
 
   sei();   // enable all interrupts after configuration is complete
@@ -162,8 +162,7 @@ int main(void) {
 
   while (1) {
       
-    // control PWM duty-cycle
-    OCR1A = (15625 * (carCount/100.0));
+    OCR1A = (15625 * (carCount/100.0));   // control PWM duty-cycle    
 
     if (lb3Sensor) {
       redLightCamera();   // activate red light camera 
